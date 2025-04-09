@@ -2,8 +2,11 @@ package john.api1.application.adapters.repositories;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -12,7 +15,11 @@ import java.util.List;
 
 @Data
 @AllArgsConstructor
-@Document(collection = "client-accounts")
+@NoArgsConstructor
+@Document(collection = "client_accounts")
+@CompoundIndexes({
+        @CompoundIndex(name = "idx_animalIds", def = "{'animalIds': 1}")
+})
 public class ClientEntity {
     @Id
     private ObjectId id;
@@ -20,7 +27,6 @@ public class ClientEntity {
     @Indexed(unique = true)
     private String email;
 
-    @Indexed
     private String phoneNumber;
 
     private boolean accountLock;
@@ -34,3 +40,6 @@ public class ClientEntity {
     private Instant createAt;
     private Instant updateAt;
 }
+
+
+

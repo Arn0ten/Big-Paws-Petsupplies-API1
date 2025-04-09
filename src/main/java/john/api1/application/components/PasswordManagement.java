@@ -16,7 +16,18 @@ public class PasswordManagement {
     }
 
     public boolean isValid(String password) {
-        return password != null && password.length() >= 8;
+        if (password == null) {
+            System.out.println("Password is null");
+            return false;
+        }
+
+        password = password.trim(); // Remove accidental spaces
+
+        boolean lengthCheck = password.length() >= 8;
+        boolean containsNumber = password.matches(".*\\d.*"); // Checks if it has a number
+        boolean containsUppercase = password.matches(".*[A-Z].*"); // Checks if it has a capital letter
+
+        return lengthCheck && (containsNumber || containsUppercase);
     }
 
 }
