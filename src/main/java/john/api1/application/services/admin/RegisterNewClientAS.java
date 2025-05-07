@@ -10,6 +10,7 @@ import john.api1.application.components.enums.SmsType;
 import john.api1.application.components.exception.DomainArgumentException;
 import john.api1.application.components.exception.EmailSendingException;
 import john.api1.application.components.exception.PersistenceException;
+import john.api1.application.components.exception.PersistenceHistoryException;
 import john.api1.application.components.record.SmsRegisterContent;
 import john.api1.application.domain.cores.ClientCreationDS;
 import john.api1.application.domain.models.ClientAccountDomain;
@@ -17,11 +18,12 @@ import john.api1.application.domain.models.ClientDomain;
 import john.api1.application.domain.models.EmailLogsDomain;
 import john.api1.application.domain.models.SmsLogDomain;
 import john.api1.application.dto.request.RegisterRDTO;
-import john.api1.application.ports.repositories.owner.IAccountSearchRepository;
-import john.api1.application.ports.repositories.owner.IAccountCreateRepository;
 import john.api1.application.ports.repositories.ILogEmailRepository;
 import john.api1.application.ports.repositories.ILogSmsRepository;
+import john.api1.application.ports.repositories.owner.IAccountCreateRepository;
+import john.api1.application.ports.repositories.owner.IAccountSearchRepository;
 import john.api1.application.ports.services.IRegisterNewClient;
+import john.api1.application.ports.services.history.IHistoryLogCreate;
 import john.api1.application.services.response.RegisterResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +35,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Service
-public class RegisterNewClientAS implements IRegisterNewClient {
-    private static final Logger logger = LoggerFactory.getLogger(RegisterNewClientAS.class);
+@Qualifier("RegisterNewClientAS")
+public class RegisterNewClientAS implements IRegisterNewClient<RegisterRDTO, RegisterResponse> {
+    private static final Logger log = LoggerFactory.getLogger(RegisterNewClientAS.class);
 
     private final ClientCreationDS clientCreation;
     private final AsyncEmailService emailService;
@@ -42,6 +45,7 @@ public class RegisterNewClientAS implements IRegisterNewClient {
     private final IAccountCreateRepository createRepository;
     private final ILogEmailRepository logEmailRepository;
     private final ILogSmsRepository logSmsRepository;
+    private final IHistoryLogCreate historyLog;
 
     @Autowired
     public RegisterNewClientAS(ClientCreationDS clientCreation,
@@ -49,19 +53,21 @@ public class RegisterNewClientAS implements IRegisterNewClient {
                                @Qualifier("MongoAccountSearchRepo") IAccountSearchRepository searchRepository,
                                @Qualifier("MongoCreateRepo") IAccountCreateRepository createRepository,
                                @Qualifier("MongoEmailLogRepo") ILogEmailRepository logEmailRepository,
-                               @Qualifier("MongoSmsLogRepo") ILogSmsRepository logSmsRepository) {
+                               @Qualifier("MongoSmsLogRepo") ILogSmsRepository logSmsRepository,
+                               IHistoryLogCreate historyLog) {
         this.clientCreation = clientCreation;
         this.emailService = emailService;
         this.searchRepository = searchRepository;
         this.createRepository = createRepository;
         this.logEmailRepository = logEmailRepository;
         this.logSmsRepository = logSmsRepository;
+        this.historyLog = historyLog;
     }
 
     // Create account credential first
     // Instantiate user information then save to db
     // Log and send email to recipient
-    // Return custom response(id, name, sms number and text, success)
+    // Return custom response(id, fileName, sms number and text, success)
     public DomainResponse<RegisterResponse> registerNewClient(RegisterRDTO request) {
         // Check if already exist
         Optional<String> validationError = validateRequest(request);
@@ -93,6 +99,15 @@ public class RegisterNewClientAS implements IRegisterNewClient {
             logSms(registeredId, account.getPhoneNumber(), request.getFullName(), smsBody);
 
             String message = String.format("New pet owner '%s' has been successfully registered.", request.getFullName());
+
+            // History log
+            try {
+                historyLog.createActivityLogOwnerRegister(registeredId, information.getFullName());
+                log.info("Activity log created for new registered owner '{}'", information.getFullName());
+            } catch (PersistenceHistoryException e) {
+                log.warn("Activity log for new owner registration failed to save in class 'RegisterNewClientAS'");
+            }
+
             return DomainResponse.success(
                     new RegisterResponse(
                             registeredId,
@@ -102,7 +117,7 @@ public class RegisterNewClientAS implements IRegisterNewClient {
                             smsBody), message);
 
         } catch (DomainArgumentException | PersistenceException | EmailSendingException e) {
-            logger.error("Error registering client: {}", e.getMessage(), e);
+            log.error("Error registering client: {}", e.getMessage(), e);
             return DomainResponse.error(exceptionMessage(e));
         }
     }
@@ -115,7 +130,7 @@ public class RegisterNewClientAS implements IRegisterNewClient {
         CompletableFuture.runAsync(() -> logEmailRepository.logEmail(emailLog));
         emailService.sendEmailAsync(EmailType.REGISTERED, fullName, email, body)
                 .doOnError(error ->
-                        logger.error("Error sending email to {}: {}", email, error.getMessage()))
+                        log.error("Error sending email to {}: {}", email, error.getMessage()))
                 .subscribe();
     }
 

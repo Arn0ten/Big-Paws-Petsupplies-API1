@@ -5,7 +5,7 @@ import john.api1.application.components.exception.DomainArgumentException;
 import john.api1.application.components.exception.PersistenceException;
 import john.api1.application.ports.repositories.owner.IPetOwnerCQRSRepository;
 import john.api1.application.ports.repositories.owner.PetOwnerCQRS;
-import john.api1.application.ports.services.IPetOwnerManagement;
+import john.api1.application.ports.services.IPetOwnerSearch;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class PetOwnerSearchAS implements IPetOwnerManagement {
+public class PetOwnerSearchAS implements IPetOwnerSearch {
     private final IPetOwnerCQRSRepository petOwnerCQRS;
 
     @Autowired
@@ -28,7 +28,17 @@ public class PetOwnerSearchAS implements IPetOwnerManagement {
 
         return petOwnerCQRS.getDetails(petOwnerId)
                 .orElseThrow(() -> new PersistenceException("Pet-owner cannot be found!"));
+    }
 
+    @Override
+    public Optional<PetOwnerCQRS> getPetOwnerDetails(String petOwnerId) {
+        if (!ObjectId.isValid(petOwnerId))
+            throw new DomainArgumentException("Pet-owner id is invalid");
+
+        return petOwnerCQRS.getDetails(petOwnerId)
+                .or(() -> {
+                    throw new PersistenceException("Pet-owner cannot be found!");
+                });
     }
 
     @Override
@@ -75,8 +85,38 @@ public class PetOwnerSearchAS implements IPetOwnerManagement {
         if (!ObjectId.isValid(ownerId)) throw new PersistenceException("Pet-owner id is invalid");
 
         var name = petOwnerCQRS.getPetOwnerName(ownerId);
-        if (name.isEmpty()) throw new PersistenceException("Pet name cannot be found.");
+        if (name.isEmpty()) throw new PersistenceException("Pet fileName cannot be found.");
         return name.get();
 
     }
+
+    @Override
+    public List<PetOwnerCQRS> getAllActivePetOwner() {
+        var allActive = petOwnerCQRS.getAllActive();
+        if (allActive.isEmpty()) throw new PersistenceException("Pet fileName cannot be found.");
+        return allActive;
+    }
+
+    @Override
+    public PetOwnerCQRS getRecentActivePetOwner() {
+        var recent = petOwnerCQRS.getRecentActive();
+        if (recent.isEmpty()) throw new PersistenceException("No recent active to be found.");
+        return recent.get();
+    }
+
+    @Override
+    public List<PetOwnerCQRS> getAllPendingPetOwner() {
+        var allPending = petOwnerCQRS.getAllPending();
+        if (allPending.isEmpty()) throw new PersistenceException("Pet fileName cannot be found.");
+        return allPending;
+    }
+
+    @Override
+    public PetOwnerCQRS getRecentPendingPetOwner() {
+        var recent = petOwnerCQRS.getRecentPending();
+        if (recent.isEmpty()) throw new PersistenceException("No recent active to be found.");
+        return recent.get();
+    }
+
+
 }

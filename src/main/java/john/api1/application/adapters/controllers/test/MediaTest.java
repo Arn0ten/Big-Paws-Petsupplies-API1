@@ -5,8 +5,10 @@ import john.api1.application.domain.models.MediaDomain;
 import john.api1.application.dto.DTOResponse;
 import john.api1.application.ports.repositories.wrapper.MediaPreview;
 import john.api1.application.ports.repositories.wrapper.PreSignedUrlResponse;
+import john.api1.application.ports.services.media.IMediaSearch;
 import john.api1.application.services.media.MediaManagementAS;
 import john.api1.application.services.media.MediaSearchAS;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -21,9 +23,10 @@ import java.util.List;
 @RequestMapping("/api/v1/media/test/")
 public class MediaTest {
     private final MediaManagementAS mediaManagement;
-    private final MediaSearchAS mediaSearch;
+    private final IMediaSearch mediaSearch;
 
-    public MediaTest(MediaManagementAS mediaManagement, MediaSearchAS mediaSearch) {
+    @Autowired
+    public MediaTest(MediaManagementAS mediaManagement, IMediaSearch mediaSearch) {
         this.mediaManagement = mediaManagement;
         this.mediaSearch = mediaSearch;
     }
@@ -31,9 +34,9 @@ public class MediaTest {
 
     @PutMapping("create")
     public ResponseEntity<DTOResponse<PreSignedUrlResponse>> createUploadLink() {
-        String idTestValue = "67cd5d7ae0964d37102fa05a";
+        String idTestValue = "67f73820ccea496c9f1d56fe";
         String fileTestValue = "example-file";
-        BucketType fileType = BucketType.PROFILE_PHOTO;
+        BucketType fileType = BucketType.REQUEST_PHOTO;
         var response = mediaManagement.generateMediaFile(idTestValue, fileTestValue, fileType);
 
         if (response.isSuccess()) {

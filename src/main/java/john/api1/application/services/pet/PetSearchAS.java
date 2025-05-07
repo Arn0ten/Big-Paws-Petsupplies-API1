@@ -8,6 +8,8 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class PetSearchAS implements IPetSearch {
     private final IPetCQRSRepository petSearch;
@@ -21,9 +23,9 @@ public class PetSearchAS implements IPetSearch {
     public PetCQRS getPetBoardingDetails(String petId) {
         if (!ObjectId.isValid(petId)) throw new PersistenceException("Pet id is invalid.");
 
-        return petSearch.getPetDetails(petId)
-                .orElseThrow(() -> new PersistenceException("Pet cannot be found."));
-
+        var pet = petSearch.getPetDetails(petId);
+        if (pet.isEmpty()) throw new PersistenceException("Pet cannot be found.");
+        return pet.get();
     }
 
     @Override
@@ -31,7 +33,7 @@ public class PetSearchAS implements IPetSearch {
         if (!ObjectId.isValid(petId)) throw new PersistenceException("Pet id is invalid.");
 
         var name = petSearch.getPetNameBreedSize(petId);
-        if (name.isEmpty()) throw new PersistenceException("Pet name cannot be found.");
+        if (name.isEmpty()) throw new PersistenceException("Pet fileName cannot be found.");
         return name.get();
     }
 
@@ -41,8 +43,15 @@ public class PetSearchAS implements IPetSearch {
         if (!ObjectId.isValid(petId)) throw new PersistenceException("Pet id is invalid.");
 
         var name = petSearch.getPetName(petId);
-        if (name.isEmpty()) throw new PersistenceException("Pet name cannot be found.");
+        if (name.isEmpty()) throw new PersistenceException("Pet fileName cannot be found.");
         return name.get();
     }
 
+    // List
+    @Override
+    public List<PetCQRS> getAllByOwner(String ownerId) {
+        if (!ObjectId.isValid(ownerId)) throw new PersistenceException("Owner id is invalid.");
+
+        return petSearch.getAllByOwner(ownerId);
+    }
 }

@@ -9,6 +9,14 @@ public interface IRequestUpdateRepository {
     void updateRequestStatus(String id, RequestStatus status);
 
     void updateRequestStatusAndActive(String id, RequestStatus status, boolean active);
+    void updateToComplete(String id, RequestStatus status, String message, boolean active);
+    Optional<RequestDomain> updateToReject(String id, RequestStatus status, String rejectedDescription);
 
-    Optional<RequestDomain> updateAfterReject(String id, RequestStatus status, String rejectedDescription);
+    // CQRS
+    Optional<RequestCQRS> updateRequestStatusReturnId(String id, RequestStatus status);
+
+    Optional<RequestCQRS> updateRequestStatusAndActiveReturnId(String id, RequestStatus status, boolean active);
+
+    Optional<RequestCQRS> updateToRejectReturnId(String id, RequestStatus status, String rejectedDescription);
+
 }

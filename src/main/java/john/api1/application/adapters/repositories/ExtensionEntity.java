@@ -8,6 +8,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -19,10 +20,13 @@ import java.time.Instant;
 public class ExtensionEntity {
     @Id
     private ObjectId id;
+    @Indexed
     private ObjectId requestId;
+    @Indexed
     private ObjectId boardingId;
     private double additionalPrice;
     private long extendedHours;
+    private String durationType;
     @Nullable
     private String description;
     @CreatedDate
@@ -31,7 +35,7 @@ public class ExtensionEntity {
     private Instant updatedAt;
     private boolean approved;
 
-    public static ExtensionEntity create(ObjectId requestId, ObjectId boardingId, double additionalPrice, long extendedHours, String description, Instant createdAt, Instant updatedAt, boolean approved) {
-        return new ExtensionEntity(null, requestId, boardingId, additionalPrice, extendedHours, description, createdAt, updatedAt, approved);
+    public static ExtensionEntity create(ObjectId requestId, ObjectId boardingId, double additionalPrice, long extendedHours, String durationType, String description, Instant createdAt, Instant updatedAt, boolean approved) {
+        return new ExtensionEntity(null, requestId, boardingId, additionalPrice, extendedHours,durationType,  description, createdAt, updatedAt, approved);
     }
 }

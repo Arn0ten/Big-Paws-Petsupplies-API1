@@ -21,7 +21,7 @@ import john.api1.application.dto.request.request.RequestExtensionRDTO;
 import john.api1.application.dto.request.request.RequestGroomingRDTO;
 import john.api1.application.dto.request.request.RequestMediaRDTO;
 import john.api1.application.ports.repositories.request.IRequestCreateRepository;
-import john.api1.application.ports.services.IPetOwnerManagement;
+import john.api1.application.ports.services.IPetOwnerSearch;
 import john.api1.application.ports.services.IRequestAggregation;
 import john.api1.application.ports.services.boarding.IBoardingSearch;
 import john.api1.application.ports.services.pet.IPetSearch;
@@ -32,14 +32,14 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class RequestCreateAS implements IRequestCreate {
-    private final IPetOwnerManagement petOwnerManagement;
+    private final IPetOwnerSearch petOwnerManagement;
     private final IPetSearch petSearch;
     private final IBoardingSearch boardingSearch;
     private final IRequestCreateRepository requestCreate;
     private final IRequestAggregation aggregation;
 
     @Autowired
-    public RequestCreateAS(IPetOwnerManagement petOwnerManagement,
+    public RequestCreateAS(IPetOwnerSearch petOwnerManagement,
                            IPetSearch petSearch,
                            IBoardingSearch boardingSearch,
                            IRequestCreateRepository requestCreate,
@@ -119,11 +119,15 @@ public class RequestCreateAS implements IRequestCreate {
                     domain.getId(),
                     request.getBoardingId(),
                     request.getDescription());
+            extensionDomain.setDurationType(type);
             extensionDomain.setAdditionalPrice(priceRate, extendedHours);
-            requestCreate.createInitialRequestExtension(extensionDomain);
+
+            var domainId = requestCreate.createInitialRequestExtension(extensionDomain);
+            if (domainId.isEmpty()) return DomainResponse.error("Failed to save initial request extension");
+            extensionDomain = extensionDomain.mapWithId(domainId.get());
 
             // Aggregation DTO
-            var dto = aggregation.requestCreateExtensionAggregation(domain, ownerName, pet.petName(), extensionDomain.getExtendedHours(), request.getExtensionType());
+            var dto = aggregation.requestCreateExtensionAggregation(domain, extensionDomain, ownerName, pet.petName(), request.getExtensionType());
 
             return DomainResponse.success(dto, "New extension request for pet '" + pet.petName() + "' is successfully created. Currently pending to be approved!");
 
@@ -167,7 +171,10 @@ public class RequestCreateAS implements IRequestCreate {
                     request.getBoardingId(),
                     request.getDescription());
             groomingDomain.setGroomingAndPrice(groomingType, priceRate);
-            requestCreate.createInitialRequestGrooming(groomingDomain);
+
+            var domainId = requestCreate.createInitialRequestGrooming(groomingDomain);
+            if (domainId.isEmpty()) return DomainResponse.error("Failed to save initial grooming request");
+            groomingDomain = groomingDomain.mapWithId(domainId.get());
 
             // Aggregation DTO
             var dto = aggregation.requestCreateGroomingAggregation(domain, ownerName, pet.petName(), groomingDomain.getGroomingPrice(), pet.size());

@@ -2,6 +2,7 @@ package john.api1.application.domain.cores.boarding;
 
 import john.api1.application.components.enums.boarding.BoardingType;
 import john.api1.application.domain.models.boarding.BoardingPricingDomain;
+import john.api1.application.ports.repositories.boarding.PricingCQRS;
 
 import java.util.Collections;
 import java.util.Optional;
@@ -11,10 +12,11 @@ public class BoardingPricingDS {
 
     // Boarding total
     public static double getBoardingTotal(BoardingPricingDomain domain) {
-        if (domain.getBoardingType() == BoardingType.LONG_STAY) {
-            return domain.getRatePerHour() * 24 * domain.getBoardingDuration(); // Fixed 24-hour rate per day
-        }
         return domain.getRatePerHour() * domain.getBoardingDuration(); // Per-hour charge for daycare
+    }
+
+    public static double getBoardingTotal(PricingCQRS pricing) {
+        return pricing.rate() * pricing.duration(); // Per-hour charge for daycare
     }
 
     // Request total

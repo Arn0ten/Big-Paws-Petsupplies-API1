@@ -2,7 +2,7 @@ package john.api1.application.adapters.controllers.user;
 
 import john.api1.application.components.ExternalReferencesUrls;
 import john.api1.application.dto.DTOResponse;
-import john.api1.application.dto.mapper.VerifyLinkResponseDTO;
+import john.api1.application.dto.mapper.VerifyLinkDTO;
 import john.api1.application.dto.request.EmailRDTO;
 import john.api1.application.dto.request.NewPasswordRDTO;
 import john.api1.application.services.user.ResetPasswordAS;
@@ -19,7 +19,7 @@ import javax.validation.Valid;
 
 @RestController
 @Validated
-@RequestMapping("/api/v1/reset-password/")
+@RequestMapping("/api/v1/pet-owner/reset-password/")
 public class PetOwnerPasswordController {
     private final ResetPasswordRequestAS passwordRequest;
     private final ResetPasswordValidateAS passwordValidate;
@@ -69,7 +69,7 @@ public class PetOwnerPasswordController {
     // Validate link
     // Return VALID, INVALID, EXPIRED
     @GetMapping("verify/{id}/{token}")
-    public ResponseEntity<DTOResponse<VerifyLinkResponseDTO>> validateResetLink(
+    public ResponseEntity<DTOResponse<VerifyLinkDTO>> validateResetLink(
             @PathVariable String id,
             @PathVariable String token) {
 
@@ -78,21 +78,21 @@ public class PetOwnerPasswordController {
             return buildErrorResponse(
                     HttpStatus.BAD_REQUEST,
                     response.getMessage(),
-                    new VerifyLinkResponseDTO(
+                    new VerifyLinkDTO(
                             response.getData().status().getResponseStatus().toUpperCase(),
                             null,
                             null));
         }
 
         // api link
-        String resetApi = String.format("%sapi/v1/reset-password/confirm/%s/%s",
+        String resetApi = String.format("%sapi/v1/pet-owner/reset-password/confirm/%s/%s",
                 referencesUrls.getSpringbootApiUrl(), id, token);
 
         // Return valid-status, username, api-to-confirm-password
         return ResponseEntity.status(HttpStatus.OK).body(
                 DTOResponse.of(
                         HttpStatus.OK.value(),
-                        new VerifyLinkResponseDTO(
+                        new VerifyLinkDTO(
                                 response.getData().status().getResponseStatus().toUpperCase(),
                                 response.getData().username(),
                                 resetApi),

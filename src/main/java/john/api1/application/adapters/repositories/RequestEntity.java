@@ -21,7 +21,11 @@ import java.time.Instant;
 @CompoundIndexes({
         @CompoundIndex(name = "ownerId_idx", def = "{'ownerId': 1}"),
         @CompoundIndex(name = "petId_idx", def = "{'petId': 1}"),
-        @CompoundIndex(name = "boardingId_idx", def = "{'boardingId': 1}")
+        @CompoundIndex(name = "boardingId_idx", def = "{'boardingId': 1}"),
+        @CompoundIndex(
+                name = "recent_media_request_idx",
+                def = "{'requestType': 1, 'active': 1, 'updatedAt': -1}"
+        )
 })
 public class RequestEntity {
     @Id
@@ -37,7 +41,7 @@ public class RequestEntity {
     @LastModifiedDate
     private Instant updatedAt;
     @Nullable
-    private String rejectDescription;
+    private String responseMessage;
     private boolean active = true;
 
     public static RequestEntity create(ObjectId ownerId, ObjectId petId, ObjectId boardingId, String requestType, String requestStatus, String description, Instant createdAt) {

@@ -6,6 +6,7 @@ import john.api1.application.components.enums.boarding.RequestType;
 import john.api1.application.components.exception.PersistenceException;
 import john.api1.application.domain.models.request.RequestDomain;
 import john.api1.application.ports.repositories.request.IRequestUpdateRepository;
+import john.api1.application.ports.repositories.request.RequestCQRS;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -35,6 +36,17 @@ public class RequestUpdateRepository implements IRequestUpdateRepository {
     }
 
     @Override
+    public void updateToComplete(String id, RequestStatus status, String message, boolean active){
+        validateId(id);
+
+        Query query = createQuery(id);
+        Update update = createUpdate(status, message).set("active", active);
+
+        performUpdate(query, update);
+    }
+
+
+    @Override
     public void updateRequestStatusAndActive(String id, RequestStatus status, boolean active) {
         validateId(id);
 
@@ -45,7 +57,7 @@ public class RequestUpdateRepository implements IRequestUpdateRepository {
     }
 
     @Override
-    public Optional<RequestDomain> updateAfterReject(String id, RequestStatus status, String rejectedDescription) {
+    public Optional<RequestDomain> updateToReject(String id, RequestStatus status, String rejectedDescription) {
         validateId(id);
 
         Query query = createQuery(id);
@@ -55,19 +67,64 @@ public class RequestUpdateRepository implements IRequestUpdateRepository {
         return Optional.ofNullable(updatedEntity).map(this::toDomain);
     }
 
+    @Override
+    public Optional<RequestCQRS> updateRequestStatusReturnId(String id, RequestStatus status) {
+        validateId(id);
+
+        Query query = createQuery(id);
+        Update update = createUpdate(status, null);
+        RequestEntity updatedEntity = mongoTemplate.findAndModify(query, update, RequestEntity.class);
+
+        if (updatedEntity == null)
+            throw new PersistenceException("No documents were updated. The request may not exist or has already been updated.");
+
+        return Optional.of(updatedEntity)
+                .map(this::toCQRS);
+    }
+
+    @Override
+    public Optional<RequestCQRS> updateRequestStatusAndActiveReturnId(String id, RequestStatus status, boolean active) {
+        validateId(id);
+
+        Query query = createQuery(id);
+        Update update = createUpdate(status, null).set("active", active);
+        RequestEntity updatedEntity = mongoTemplate.findAndModify(query, update, RequestEntity.class);
+
+        if (updatedEntity == null)
+            throw new PersistenceException("No documents were updated. The request may not exist or has already been updated.");
+
+        return Optional.of(updatedEntity)
+                .map(this::toCQRS);
+    }
+
+    @Override
+    public Optional<RequestCQRS> updateToRejectReturnId(String id, RequestStatus status, String rejectedDescription) {
+        validateId(id);
+        Query query = createQuery(id);
+        Update update = createUpdate(status, rejectedDescription);
+        RequestEntity updatedEntity = mongoTemplate.findAndModify(query, update, RequestEntity.class);
+
+        if (updatedEntity == null)
+            throw new PersistenceException("No documents were updated. The request may not exist or has already been updated.");
+
+        return Optional.of(updatedEntity)
+                .map(this::toCQRS);
+    }
+
+
     ////////////////////
     // Helper methods //
     private Query createQuery(String id) {
         return new Query(Criteria.where("_id").is(new ObjectId(id)));
     }
 
-    private Update createUpdate(RequestStatus status, String rejectedDescription) {
+    private Update createUpdate(RequestStatus status, String responseMessage) {
         Update update = new Update()
-                .set("requestStatus", status.toString())
+                .set("requestStatus", status.getRequestStatus())
                 .set("updatedAt", Instant.now());
 
-        if (rejectedDescription != null) {
-            update.set("rejectDescription", rejectedDescription);
+        if (responseMessage != null) {
+            update.set("responseMessage", responseMessage);
         }
 
         return update;
@@ -95,8 +152,18 @@ public class RequestUpdateRepository implements IRequestUpdateRepository {
                 entity.getDescription(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
-                entity.getRejectDescription(),
+                entity.getResponseMessage(),
                 entity.isActive()
         );
+    }
+
+    private RequestCQRS toCQRS(RequestEntity entity) {
+        return RequestCQRS.mapIds(
+                entity.getId().toString(),
+                entity.getOwnerId().toString(),
+                entity.getPetId().toString(),
+                entity.getBoardingId().toString()
+        );
+
     }
 }
